@@ -1,0 +1,178 @@
+import pygame
+import random
+from enum import Enum
+
+pygame.init()
+screen=pygame.display.set_mode((800,600))
+bullets=[]
+shootsound=pygame.mixer.Sound("C:\\Users\\user\\Desktop\\semester\\homework\\lecture 3\\tank_sound3.wav")
+backgroundmusic=pygame.mixer.music.load("C:\\Users\\user\\Desktop\\semester\\homework\\lecture 3\\bg_sound.mp3")
+pygame.mixer.music.play(-1)
+backgroundImage=pygame.image.load("goodgame.png")
+font = pygame.font.SysFont('Times new roman', 32)
+class Direction(Enum):
+    UP=2
+    DOWN=4
+    LEFT=1
+    RIGHT=3
+
+class Tank:
+
+    def __init__(self,x,y,speed,color,info,shoot, d_right = pygame.K_RIGHT,d_left = pygame.K_LEFT,d_down = pygame.K_DOWN,d_up = pygame.K_UP):
+        self.x=x
+        self.y=y
+        self.speed=speed
+        self.color=color
+        self.shoot=shoot
+        self.width=40
+        self.direction=Direction.RIGHT
+        self.timer=0
+        self.hp=3
+        self.KEY ={d_right:Direction.RIGHT,d_left:Direction.LEFT,d_up:Direction.UP,d_down:Direction.DOWN}
+        self.info=info
+ 
+    def  draw(self):
+        tank_c = (self.x+int(self.width/2),self.y+int(self.width/2))
+        pygame.draw.rect(screen,self.color,(self.x,self.y,self.width,self.width),2)
+        pygame.draw.circle(screen,self.color,tank_c,int(self.width/2))
+
+        if self.direction == Direction.RIGHT:
+            pygame.draw.line(screen,self.color,tank_c,(self.x+self.width+int(self.width/2),self.y+int(self.width/2)),4)
+
+        if self.direction == Direction.LEFT:
+             pygame.draw.line(screen,self.color,tank_c,(self.x-int(self.width/2),self.y+int(self.width/2)),4) 
+
+        if self.direction == Direction.UP:
+             pygame.draw.line(screen,self.color,tank_c,(self.x+int(self.width/2),self.y-int(self.width/2)),4)
+
+        if self.direction == Direction.DOWN:
+             pygame.draw.line(screen,self.color,tank_c,(self.x+int(self.width/2),self.width+self.y+int(self.width/2)),4)     
+
+   
+    def change_direction(self,direction):
+        self.direction = direction
+    
+    def move(self):
+            if self.direction ==Direction.LEFT:
+                self.x-=self.speed
+            if self.direction ==Direction.RIGHT:
+                self.x+=self.speed
+            if self.direction ==Direction.UP:
+                self.y-=self.speed
+            if self.direction ==Direction.DOWN:
+                self.y+=self.speed
+            if self.x>797:
+                self.x=0
+            if self.y>597:
+                self.y=0 
+            if self.x<0 :
+                self.x=797
+            if self.y<0:
+                self.y=597       
+            self.draw()
+
+    def attack(self):
+        if self.direction ==Direction.LEFT:
+            bullets.append(Bullet(self.x-int(self.width/2),self.y+int(self.width/2),self.direction,self.color,self))        
+        elif self.direction ==Direction.RIGHT:
+            bullets.append(Bullet(self.x+self.width+int(self.width/2),self.y+int(self.width/2),self.direction,self.color,self))   
+        elif self.direction ==Direction.UP:
+            bullets.append(Bullet(self.x+int(self.width/2),self.y-int(self.width/2),self.direction,self.color,self))    
+        elif self.direction ==Direction.DOWN:
+            bullets.append(Bullet(self.x+int(self.width/2),self.width+self.y+int(self.width/2),self.direction,self.color,self))  
+        shootsound.play()
+    
+    def hpshow(self):
+        hptext=font.render('HP: '+str(self.hp),True,self.color)
+        screen.blit(hptext,self.info)
+
+class Bullet():
+    def __init__(self,x,y,direction,color,tank):
+        self.x=x
+        self.y=y
+        self.direction=direction
+        self.color=color
+        self.tank=tank
+        self.t=10
+    def draw(self):
+        pygame.draw.circle(screen,self.color,(self.x,self.y),3)
+    
+    def move(self):
+        if self.direction== Direction.RIGHT:
+            self.x+=6
+        elif self.direction== Direction.LEFT:
+            self.x-=6
+        elif self.direction== Direction.UP:
+            self.y-=6
+        elif self.direction== Direction.DOWN:
+            self.y+=6
+        if self.x>797 :
+            self.x=0
+        if self.y>597:
+            self.y=0 
+        if self.x<0 :
+            self.x=797
+        if self.y<0:
+            self.y=597 
+        self.draw()
+        
+
+mainloop = True
+
+tank1=Tank(500,300,4,(255,123,100),(700,10),pygame.K_RETURN)
+tank2=Tank(300,300,4,(255,0,124),(10,10),pygame.K_SPACE,pygame.K_d,pygame.K_a,pygame.K_s,pygame.K_w)
+tanks=[tank1,tank2]
+
+FPS =15
+
+clock=pygame.time.Clock()
+
+while mainloop:
+    millis= clock.tick(FPS)
+    second=millis/1000
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            mainloop = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+               mainloop = False
+            for tank in tanks:    
+                if event.key in tank.KEY.keys() :
+                    tank.change_direction(tank.KEY[event.key])
+                if event.key ==tank.shoot and tank.timer>1:
+                    tank.attack()
+                    tank.timer=0
+
+    
+    try:
+        for tank in tanks:
+            for i in range(len(bullets)):
+                if all((bullets[i].x>=tank.x,bullets[i].x<=tank.x+tank.width,bullets[i].y>=tank.y,bullets[i].y<=tank.y+tank.width,bullets[i].tank!=tank)):
+                    bullets.pop(i)
+                    tank.hp-=1               
+        for  i in range(len(bullets)):
+            if bullets[i].t<0:
+                bullets.pop(i)
+        for i in range(len(tanks)):
+            if tanks[i].hp<=0:
+                tanks.pop(i)
+    except IndexError:
+        print("",end="")
+        
+    
+
+
+    screen.fill((0,0,0))
+    
+    for tank in tanks:
+        tank.move()
+        tank.hpshow()
+        tank.timer+=second
+    for bullet in bullets:
+        bullet.move()
+        bullet.t-=second
+
+    if len(tanks)<=1:
+        screen.blit(backgroundImage,(0,0))  
+    pygame.display.flip()
+pygame.quit()
